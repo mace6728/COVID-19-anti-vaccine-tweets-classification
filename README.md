@@ -283,6 +283,28 @@ test 資料的 12 labels 為 0 佔位，不可視為真值。
 - `recommended_bce_pos_weight`
 - `config`（本次執行參數）
 
+## 6.3 readable/（快速可讀化檢視）
+
+為了讓資料能「一目瞭然」，已額外產出 `readable/`：
+
+- `train_preprocessed_readable.md`
+- `val_preprocessed_readable.md`
+- `test_preprocessed_readable.md`
+- `sample_submission_readable.md`
+- `train_preprocessed_view.tsv`
+- `val_preprocessed_view.tsv`
+- `test_preprocessed_view.tsv`
+
+兩種檔案用途：
+
+- `*_readable.md`：摘要報表（總列數、欄位、標籤分布、前 20 筆預覽）
+- `*_view.tsv`：扁平化檢視（把 12 個 one-hot 標籤整併成單一 `label` 欄）
+
+建議閱讀順序：
+
+1. 先看 `train_preprocessed_readable.md` 掌握分布與欄位
+2. 再看 `train_preprocessed_view.tsv` 逐列掃描內容
+
 ---
 
 ## 7. 目前資料統計摘要（本次執行結果）

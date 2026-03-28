@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+# Treat common model artifacts as binary
+*.pt binary
+*.pth binary
+*.ckpt binary
+*.bin binary
+*.onnx binary
+*.safetensors binary
+*.h5 binary
