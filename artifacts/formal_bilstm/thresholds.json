@@ -1,0 +1,25 @@
+{
+  "thresholds": {
+    "ineffective": 0.1,
+    "unnecessary": 0.15000000000000002,
+    "pharma": 0.1,
+    "rushed": 0.15000000000000002,
+    "side-effect": 0.5500000000000002,
+    "mandatory": 0.25000000000000006,
+    "country": 0.1,
+    "ingredients": 0.25000000000000006,
+    "political": 0.7500000000000002,
+    "none": 0.8000000000000002,
+    "conspiracy": 0.5000000000000001,
+    "religious": 0.6500000000000001
+  },
+  "default_macro_f1": 0.4406936249688968,
+  "tuned_macro_f1": 0.45908627383721257,
+  "default_micro_f1": 0.5601012231126107,
+  "tuned_micro_f1": 0.5736738703339882,
+  "search": {
+    "start": 0.1,
+    "end": 0.9,
+    "step": 0.05
+  }
+}

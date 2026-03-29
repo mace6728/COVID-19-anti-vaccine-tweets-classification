@@ -1,0 +1,22 @@
+{
+  "label_order": [
+    "ineffective",
+    "unnecessary",
+    "pharma",
+    "rushed",
+    "side-effect",
+    "mandatory",
+    "country",
+    "ingredients",
+    "political",
+    "none",
+    "conspiracy",
+    "religious"
+  ],
+  "best_val_macro_f1": 0.14639220145607298,
+  "default_macro_f1": 0.14639220145607298,
+  "tuned_macro_f1": 0.18658656866949375,
+  "model_type": "bilstm",
+  "loss_type": "bce",
+  "output_dir": "/home/mace/College/kaggle/HW1_dataset/artifacts/smoke_bilstm"
+}

@@ -1,0 +1,22 @@
+{
+  "label_order": [
+    "ineffective",
+    "unnecessary",
+    "pharma",
+    "rushed",
+    "side-effect",
+    "mandatory",
+    "country",
+    "ingredients",
+    "political",
+    "none",
+    "conspiracy",
+    "religious"
+  ],
+  "best_val_macro_f1": 0.2716867272570278,
+  "default_macro_f1": 0.2716867272570278,
+  "tuned_macro_f1": 0.2963499801954305,
+  "model_type": "bilstm",
+  "loss_type": "bce",
+  "output_dir": "/home/mace/College/kaggle/HW1_dataset/artifacts/recheck_bilstm"
+}

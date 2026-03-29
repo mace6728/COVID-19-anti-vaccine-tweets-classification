@@ -12,44 +12,44 @@ env/
 .env
 .env.*
 
-# IDE settings
-.vscode/
-.idea/
+# # IDE settings
+# .vscode/
+# .idea/
 
-# OS files
-.DS_Store
-Thumbs.db
+# # OS files
+# .DS_Store
+# Thumbs.db
 
-# Training artifacts and model checkpoints
-artifacts/
-checkpoints/
-runs/
-wandb/
-mlruns/
-logs/
-*.log
-*.pt
-*.pth
-*.ckpt
-*.bin
-*.onnx
-*.safetensors
-*.h5
-*.npy
-*.npz
-*.pkl
-*.joblib
+# # Training artifacts and model checkpoints
+# artifacts/
+# checkpoints/
+# runs/
+# wandb/
+# mlruns/
+# logs/
+# *.log
+# *.pt
+# *.pth
+# *.ckpt
+# *.bin
+# *.onnx
+# *.safetensors
+# *.h5
+# *.npy
+# *.npz
+# *.pkl
+# *.joblib
 
-# Local data and derived tables
-train.json
-val.json
-test.json
-preprocessed/
-readable/
-*.tsv
+# # # Local data and derived tables
+# # train.json
+# # val.json
+# # test.json
+# # preprocessed/
+# # readable/
+# # *.tsv
 
-# Temporary files and folders
-tmp/
-temp/
-*.tmp
-*.swp
+# # Temporary files and folders
+# tmp/
+# temp/
+# *.tmp
+# *.swp

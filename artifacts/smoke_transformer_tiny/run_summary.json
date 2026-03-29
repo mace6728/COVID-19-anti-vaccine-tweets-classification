@@ -1,0 +1,22 @@
+{
+  "label_order": [
+    "ineffective",
+    "unnecessary",
+    "pharma",
+    "rushed",
+    "side-effect",
+    "mandatory",
+    "country",
+    "ingredients",
+    "political",
+    "none",
+    "conspiracy",
+    "religious"
+  ],
+  "best_val_macro_f1": 0.13633597768220354,
+  "default_macro_f1": 0.13633597768220354,
+  "tuned_macro_f1": 0.1927046860627745,
+  "model_type": "transformer",
+  "loss_type": "bce",
+  "output_dir": "/home/mace/College/kaggle/HW1_dataset/artifacts/smoke_transformer_tiny"
+}

@@ -1,0 +1,278 @@
+{
+  "label_order": [
+    "ineffective",
+    "unnecessary",
+    "pharma",
+    "rushed",
+    "side-effect",
+    "mandatory",
+    "country",
+    "ingredients",
+    "political",
+    "none",
+    "conspiracy",
+    "religious"
+  ],
+  "shape_check": {
+    "train_dim": 12,
+    "val_dim": 12,
+    "test_dim": 12,
+    "expected_dim": 12,
+    "with_index_columns": 13
+  },
+  "unknown_labels": {
+    "train": {},
+    "val": {}
+  },
+  "train_stats": {
+    "n_samples": 6956,
+    "avg_labels_per_sample": 1.2236917768832662,
+    "max_labels_per_sample": 3,
+    "min_labels_per_sample": 1,
+    "labels": {
+      "ineffective": {
+        "positive": 1171,
+        "negative": 5785,
+        "positive_rate": 0.1683438757906843,
+        "pos_weight": 4.9402220324508965
+      },
+      "unnecessary": {
+        "positive": 503,
+        "negative": 6453,
+        "positive_rate": 0.07231167337550316,
+        "pos_weight": 12.829025844930417
+      },
+      "pharma": {
+        "positive": 889,
+        "negative": 6067,
+        "positive_rate": 0.12780333525014376,
+        "pos_weight": 6.824521934758155
+      },
+      "rushed": {
+        "positive": 1031,
+        "negative": 5925,
+        "positive_rate": 0.14821736630247268,
+        "pos_weight": 5.746847720659554
+      },
+      "side-effect": {
+        "positive": 2663,
+        "negative": 4293,
+        "positive_rate": 0.3828349626221967,
+        "pos_weight": 1.6120916259857303
+      },
+      "mandatory": {
+        "positive": 548,
+        "negative": 6408,
+        "positive_rate": 0.07878090856814261,
+        "pos_weight": 11.693430656934307
+      },
+      "country": {
+        "positive": 140,
+        "negative": 6816,
+        "positive_rate": 0.020126509488211614,
+        "pos_weight": 48.68571428571428
+      },
+      "ingredients": {
+        "positive": 304,
+        "negative": 6652,
+        "positive_rate": 0.04370327774583094,
+        "pos_weight": 21.88157894736842
+      },
+      "political": {
+        "positive": 437,
+        "negative": 6519,
+        "positive_rate": 0.06282346175963197,
+        "pos_weight": 14.917620137299771
+      },
+      "none": {
+        "positive": 440,
+        "negative": 6516,
+        "positive_rate": 0.06325474410580793,
+        "pos_weight": 14.809090909090909
+      },
+      "conspiracy": {
+        "positive": 341,
+        "negative": 6615,
+        "positive_rate": 0.04902242668200115,
+        "pos_weight": 19.39882697947214
+      },
+      "religious": {
+        "positive": 45,
+        "negative": 6911,
+        "positive_rate": 0.006469235192639448,
+        "pos_weight": 153.57777777777778
+      }
+    }
+  },
+  "val_stats": {
+    "n_samples": 987,
+    "avg_labels_per_sample": 1.2310030395136777,
+    "max_labels_per_sample": 3,
+    "min_labels_per_sample": 1,
+    "labels": {
+      "ineffective": {
+        "positive": 167,
+        "negative": 820,
+        "positive_rate": 0.1691995947315096,
+        "pos_weight": 4.910179640718563
+      },
+      "unnecessary": {
+        "positive": 72,
+        "negative": 915,
+        "positive_rate": 0.0729483282674772,
+        "pos_weight": 12.708333333333334
+      },
+      "pharma": {
+        "positive": 127,
+        "negative": 860,
+        "positive_rate": 0.1286727456940223,
+        "pos_weight": 6.771653543307087
+      },
+      "rushed": {
+        "positive": 147,
+        "negative": 840,
+        "positive_rate": 0.14893617021276595,
+        "pos_weight": 5.714285714285714
+      },
+      "side-effect": {
+        "positive": 379,
+        "negative": 608,
+        "positive_rate": 0.3839918946301925,
+        "pos_weight": 1.604221635883905
+      },
+      "mandatory": {
+        "positive": 78,
+        "negative": 909,
+        "positive_rate": 0.0790273556231003,
+        "pos_weight": 11.653846153846153
+      },
+      "country": {
+        "positive": 20,
+        "negative": 967,
+        "positive_rate": 0.020263424518743668,
+        "pos_weight": 48.35
+      },
+      "ingredients": {
+        "positive": 44,
+        "negative": 943,
+        "positive_rate": 0.044579533941236066,
+        "pos_weight": 21.431818181818183
+      },
+      "political": {
+        "positive": 63,
+        "negative": 924,
+        "positive_rate": 0.06382978723404255,
+        "pos_weight": 14.666666666666666
+      },
+      "none": {
+        "positive": 63,
+        "negative": 924,
+        "positive_rate": 0.06382978723404255,
+        "pos_weight": 14.666666666666666
+      },
+      "conspiracy": {
+        "positive": 49,
+        "negative": 938,
+        "positive_rate": 0.04964539007092199,
+        "pos_weight": 19.142857142857142
+      },
+      "religious": {
+        "positive": 6,
+        "negative": 981,
+        "positive_rate": 0.0060790273556231,
+        "pos_weight": 163.5
+      }
+    }
+  },
+  "train_val_rate_drift": {
+    "ineffective": {
+      "train_rate": 0.1683438757906843,
+      "val_rate": 0.1691995947315096,
+      "abs_diff": 0.0008557189408253119
+    },
+    "unnecessary": {
+      "train_rate": 0.07231167337550316,
+      "val_rate": 0.0729483282674772,
+      "abs_diff": 0.0006366548919740367
+    },
+    "pharma": {
+      "train_rate": 0.12780333525014376,
+      "val_rate": 0.1286727456940223,
+      "abs_diff": 0.0008694104438785322
+    },
+    "rushed": {
+      "train_rate": 0.14821736630247268,
+      "val_rate": 0.14893617021276595,
+      "abs_diff": 0.0007188039102932753
+    },
+    "side-effect": {
+      "train_rate": 0.3828349626221967,
+      "val_rate": 0.3839918946301925,
+      "abs_diff": 0.0011569320079958256
+    },
+    "mandatory": {
+      "train_rate": 0.07878090856814261,
+      "val_rate": 0.0790273556231003,
+      "abs_diff": 0.00024644705495768804
+    },
+    "country": {
+      "train_rate": 0.020126509488211614,
+      "val_rate": 0.020263424518743668,
+      "abs_diff": 0.00013691503053205392
+    },
+    "ingredients": {
+      "train_rate": 0.04370327774583094,
+      "val_rate": 0.044579533941236066,
+      "abs_diff": 0.0008762561954051284
+    },
+    "political": {
+      "train_rate": 0.06282346175963197,
+      "val_rate": 0.06382978723404255,
+      "abs_diff": 0.0010063254744105826
+    },
+    "none": {
+      "train_rate": 0.06325474410580793,
+      "val_rate": 0.06382978723404255,
+      "abs_diff": 0.0005750431282346147
+    },
+    "conspiracy": {
+      "train_rate": 0.04902242668200115,
+      "val_rate": 0.04964539007092199,
+      "abs_diff": 0.0006229633889208372
+    },
+    "religious": {
+      "train_rate": 0.006469235192639448,
+      "val_rate": 0.0060790273556231,
+      "abs_diff": 0.0003902078370163478
+    }
+  },
+  "recommended_bce_pos_weight": {
+    "ineffective": 4.9402220324508965,
+    "unnecessary": 12.829025844930417,
+    "pharma": 6.824521934758155,
+    "rushed": 5.746847720659554,
+    "side-effect": 1.6120916259857303,
+    "mandatory": 11.693430656934307,
+    "country": 48.68571428571428,
+    "ingredients": 21.88157894736842,
+    "political": 14.917620137299771,
+    "none": 14.809090909090909,
+    "conspiracy": 19.39882697947214,
+    "religious": 153.57777777777778
+  },
+  "config": {
+    "model_type": "transformer",
+    "max_length": 128,
+    "url_mode": "token",
+    "user_mode": "token",
+    "emoji_mode": "demojize",
+    "rnn_lowercase": false,
+    "rnn_remove_punct": false,
+    "rnn_remove_stopwords": false,
+    "strict_label_order": true,
+    "export_token_ids": false,
+    "tokenizer_name": "bert-base-uncased",
+    "vocab_size": 30000,
+    "min_freq": 2
+  }
+}

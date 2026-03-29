@@ -1,0 +1,20 @@
+{
+  "label_order": [
+    "ineffective",
+    "unnecessary",
+    "pharma",
+    "rushed",
+    "side-effect",
+    "mandatory",
+    "country",
+    "ingredients",
+    "political",
+    "none",
+    "conspiracy",
+    "religious"
+  ],
+  "best_val_macro_f1": 0.11020517278817887,
+  "default_macro_f1": 0.11020517278817887,
+  "tuned_macro_f1": 0.2120781239353536,
+  "output_dir": "/home/mace/College/kaggle/HW1_dataset/artifacts/smoke_run"
+}
