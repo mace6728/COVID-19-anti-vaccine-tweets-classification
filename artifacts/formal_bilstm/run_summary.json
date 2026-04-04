@@ -18,5 +18,5 @@
   "tuned_macro_f1": 0.45908627383721257,
   "model_type": "bilstm",
   "loss_type": "bce",
-  "output_dir": "/home/mace/College/kaggle/HW1_dataset/artifacts/formal_bilstm"
+  "output_dir": "artifacts/formal_bilstm"
 }

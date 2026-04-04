@@ -18,5 +18,5 @@
   "tuned_macro_f1": 0.18658656866949375,
   "model_type": "bilstm",
   "loss_type": "bce",
-  "output_dir": "/home/mace/College/kaggle/HW1_dataset/artifacts/smoke_bilstm"
+  "output_dir": "artifacts/smoke_bilstm"
 }

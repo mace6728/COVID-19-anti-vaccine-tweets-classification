@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 from typing import Dict, List
 
@@ -479,7 +480,9 @@ def main() -> None:
         "tuned_macro_f1": metric_to_float(tuned_metrics, "macro_f1"),
         "model_type": args.model_type,
         "loss_type": args.loss_type,
-        "output_dir": str(args.output_dir.resolve()),
+        "output_dir": os.path.relpath(
+            str(args.output_dir.resolve()), start=str(Path.cwd().resolve())
+        ),
     }
     save_json(args.output_dir / "run_summary.json", run_summary)
 

@@ -224,8 +224,8 @@ ASL 常見優勢：
 ### 8.1 環境安裝
 
 ~~~bash
-cd /home/mace/College/kaggle/HW1_dataset
-/home/mace/College/kaggle/.venv/bin/pip install -r requirements.txt
+cd .
+python -m pip install -r requirements.txt
 ~~~
 
 ### 8.2 確認資料齊全
@@ -244,7 +244,7 @@ ls preprocessed
 ### 8.3 先做 tiny smoke test（可選，但強烈建議）
 
 ~~~bash
-/home/mace/College/kaggle/.venv/bin/python train.py \
+python train.py \
   --model-type transformer \
   --pretrained-model hf-internal-testing/tiny-random-roberta \
   --epochs 1 \
@@ -257,7 +257,7 @@ ls preprocessed
 ### 8.4 CT-BERT 第一輪正式設定（推薦）
 
 ~~~bash
-/home/mace/College/kaggle/.venv/bin/python train.py \
+python train.py \
   --model-type transformer \
   --pretrained-model digitalepidemiologylab/covid-twitter-bert-v2 \
   --head-type linear \
@@ -285,7 +285,7 @@ ls preprocessed
 ### 8.5 產生提交檔
 
 ~~~bash
-/home/mace/College/kaggle/.venv/bin/python predict.py \
+python predict.py \
   --checkpoint artifacts/ctbert_round1_asl/best_model.pt \
   --threshold-file artifacts/ctbert_round1_asl/thresholds.json \
   --sample-submission sample_submission.csv \
@@ -364,7 +364,7 @@ ls preprocessed
 處理：
 
 ~~~bash
-/home/mace/College/kaggle/.venv/bin/pip install transformers
+python -m pip install transformers
 ~~~
 
 ### 11.2 標籤順序錯誤
@@ -425,7 +425,7 @@ ls preprocessed
 
 ~~~bash
 # 1) train
-/home/mace/College/kaggle/.venv/bin/python train.py \
+python train.py \
   --model-type transformer \
   --pretrained-model digitalepidemiologylab/covid-twitter-bert-v2 \
   --head-type linear \
@@ -440,7 +440,7 @@ ls preprocessed
   --output-dir artifacts/ctbert_round1_asl
 
 # 2) predict
-/home/mace/College/kaggle/.venv/bin/python predict.py \
+python predict.py \
   --checkpoint artifacts/ctbert_round1_asl/best_model.pt \
   --threshold-file artifacts/ctbert_round1_asl/thresholds.json \
   --output-file artifacts/ctbert_round1_asl/submission.csv
