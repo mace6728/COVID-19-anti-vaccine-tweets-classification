@@ -90,6 +90,21 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--threshold-start", type=float, default=0.1)
     parser.add_argument("--threshold-end", type=float, default=0.9)
     parser.add_argument("--threshold-step", type=float, default=0.05)
+    parser.add_argument(
+        "--threshold-calibration-ratio",
+        type=float,
+        default=0.0,
+        help=(
+            "Fraction of validation data reserved for threshold calibration. "
+            "When > 0, model selection uses the remaining validation subset."
+        ),
+    )
+    parser.add_argument(
+        "--threshold-calibration-seed",
+        type=int,
+        default=42,
+        help="Random seed for validation calibration split.",
+    )
 
     parser.add_argument("--glove-path", type=Path, default=None)
     parser.add_argument("--freeze-embedding", action="store_true")
@@ -250,6 +265,38 @@ def build_criterion(
     )
 
 
+def split_validation_dataframe(
+    val_df,
+    calibration_ratio: float,
+    split_seed: int,
+):
+    if not 0.0 <= calibration_ratio < 1.0:
+        raise ValueError("threshold_calibration_ratio must be in [0.0, 1.0)")
+
+    if calibration_ratio <= 0.0:
+        return val_df, val_df, False
+
+    total = len(val_df)
+    if total < 2:
+        print("[WARN] Validation set too small for calibration split; using shared val.")
+        return val_df, val_df, False
+
+    calibration_count = int(round(total * calibration_ratio))
+    calibration_count = max(1, min(total - 1, calibration_count))
+    calibration_df = val_df.sample(n=calibration_count, random_state=split_seed)
+    selection_df = val_df.drop(index=calibration_df.index)
+
+    selection_df = selection_df.reset_index(drop=True)
+    calibration_df = calibration_df.reset_index(drop=True)
+
+    print(
+        "[INFO] Validation split for threshold calibration: "
+        f"selection={len(selection_df)}, calibration={len(calibration_df)}, "
+        f"ratio={calibration_ratio:.2f}"
+    )
+    return selection_df, calibration_df, True
+
+
 def main() -> None:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -272,24 +319,57 @@ def main() -> None:
 
     train_df = load_split_csv(train_path)
     val_df = load_split_csv(val_path)
+    val_select_df, val_calibration_df, uses_calibration_split = split_validation_dataframe(
+        val_df=val_df,
+        calibration_ratio=args.threshold_calibration_ratio,
+        split_seed=args.threshold_calibration_seed,
+    )
 
     if args.model_type == "bilstm":
         model, train_loader, val_loader, vocab, model_args = build_bilstm_model(
             args=args,
             label_order=label_order,
             train_df=train_df,
-            val_df=val_df,
+            val_df=val_select_df,
             device=device,
         )
+
+        if uses_calibration_split:
+            _, val_calibration_loader = create_dataloaders(
+                train_df=val_calibration_df,
+                val_df=val_calibration_df,
+                label_order=label_order,
+                text_column=args.text_column,
+                vocab=vocab,
+                max_length=args.max_length,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+            )
+        else:
+            val_calibration_loader = val_loader
     else:
         model, train_loader, val_loader, model_args = build_transformer_model(
             args=args,
             label_order=label_order,
             train_df=train_df,
-            val_df=val_df,
+            val_df=val_select_df,
             device=device,
         )
         vocab = None
+
+        if uses_calibration_split:
+            _, val_calibration_loader = create_transformer_dataloaders(
+                train_df=val_calibration_df,
+                val_df=val_calibration_df,
+                label_order=label_order,
+                text_column=args.text_column,
+                tokenizer_name=args.pretrained_model,
+                max_length=args.max_length,
+                batch_size=args.batch_size,
+                num_workers=args.num_workers,
+            )
+        else:
+            val_calibration_loader = val_loader
 
     pos_weight = build_pos_weight(metadata, label_order, device)
     criterion = build_criterion(args=args, pos_weight=pos_weight)
@@ -431,14 +511,17 @@ def main() -> None:
     best_checkpoint = torch.load(best_model_path, map_location=device)
     model.load_state_dict(best_checkpoint["model_state_dict"])
 
-    val_logits, val_labels = collect_logits_and_labels(
+    val_select_logits, val_select_labels = collect_logits_and_labels(
         model=model, data_loader=val_loader, device=device
     )
-    val_probs = 1 / (1 + np.exp(-val_logits))
+    val_calibration_logits, val_calibration_labels = collect_logits_and_labels(
+        model=model, data_loader=val_calibration_loader, device=device
+    )
+    val_calibration_probs = 1 / (1 + np.exp(-val_calibration_logits))
 
     tuned_thresholds_map = tune_per_label_thresholds(
-        probabilities=val_probs,
-        labels=val_labels,
+        probabilities=val_calibration_probs,
+        labels=val_calibration_labels,
         label_order=label_order,
         start=args.threshold_start,
         end=args.threshold_end,
@@ -446,25 +529,68 @@ def main() -> None:
     )
     tuned_thresholds = thresholds_to_list(tuned_thresholds_map, label_order)
 
-    default_metrics = evaluate_from_logits(
-        logits=val_logits,
-        labels=val_labels,
+    default_metrics_selection = evaluate_from_logits(
+        logits=val_select_logits,
+        labels=val_select_labels,
         label_order=label_order,
         thresholds=[0.5] * len(label_order),
     )
-    tuned_metrics = evaluate_from_logits(
-        logits=val_logits,
-        labels=val_labels,
+
+    tuned_metrics_selection = evaluate_from_logits(
+        logits=val_select_logits,
+        labels=val_select_labels,
+        label_order=label_order,
+        thresholds=tuned_thresholds,
+    )
+
+    default_metrics_calibration = evaluate_from_logits(
+        logits=val_calibration_logits,
+        labels=val_calibration_labels,
+        label_order=label_order,
+        thresholds=[0.5] * len(label_order),
+    )
+
+    tuned_metrics_calibration = evaluate_from_logits(
+        logits=val_calibration_logits,
+        labels=val_calibration_labels,
         label_order=label_order,
         thresholds=tuned_thresholds,
     )
 
     threshold_payload = {
         "thresholds": tuned_thresholds_map,
-        "default_macro_f1": metric_to_float(default_metrics, "macro_f1"),
-        "tuned_macro_f1": metric_to_float(tuned_metrics, "macro_f1"),
-        "default_micro_f1": metric_to_float(default_metrics, "micro_f1"),
-        "tuned_micro_f1": metric_to_float(tuned_metrics, "micro_f1"),
+        "selection_default_macro_f1": metric_to_float(
+            default_metrics_selection, "macro_f1"
+        ),
+        "selection_tuned_macro_f1": metric_to_float(
+            tuned_metrics_selection, "macro_f1"
+        ),
+        "selection_default_micro_f1": metric_to_float(
+            default_metrics_selection, "micro_f1"
+        ),
+        "selection_tuned_micro_f1": metric_to_float(
+            tuned_metrics_selection, "micro_f1"
+        ),
+        "calibration_default_macro_f1": metric_to_float(
+            default_metrics_calibration, "macro_f1"
+        ),
+        "calibration_tuned_macro_f1": metric_to_float(
+            tuned_metrics_calibration, "macro_f1"
+        ),
+        "calibration_default_micro_f1": metric_to_float(
+            default_metrics_calibration, "micro_f1"
+        ),
+        "calibration_tuned_micro_f1": metric_to_float(
+            tuned_metrics_calibration, "micro_f1"
+        ),
+        "default_macro_f1": metric_to_float(default_metrics_calibration, "macro_f1"),
+        "tuned_macro_f1": metric_to_float(tuned_metrics_calibration, "macro_f1"),
+        "default_micro_f1": metric_to_float(default_metrics_calibration, "micro_f1"),
+        "tuned_micro_f1": metric_to_float(tuned_metrics_calibration, "micro_f1"),
+        "uses_calibration_split": uses_calibration_split,
+        "threshold_calibration_ratio": args.threshold_calibration_ratio,
+        "selection_size": int(len(val_select_df)),
+        "calibration_size": int(len(val_calibration_df)),
         "search": {
             "start": args.threshold_start,
             "end": args.threshold_end,
@@ -476,8 +602,24 @@ def main() -> None:
     run_summary = {
         "label_order": label_order,
         "best_val_macro_f1": best_macro_f1,
-        "default_macro_f1": metric_to_float(default_metrics, "macro_f1"),
-        "tuned_macro_f1": metric_to_float(tuned_metrics, "macro_f1"),
+        "selection_default_macro_f1": metric_to_float(
+            default_metrics_selection, "macro_f1"
+        ),
+        "selection_tuned_macro_f1": metric_to_float(
+            tuned_metrics_selection, "macro_f1"
+        ),
+        "calibration_default_macro_f1": metric_to_float(
+            default_metrics_calibration, "macro_f1"
+        ),
+        "calibration_tuned_macro_f1": metric_to_float(
+            tuned_metrics_calibration, "macro_f1"
+        ),
+        "default_macro_f1": metric_to_float(default_metrics_calibration, "macro_f1"),
+        "tuned_macro_f1": metric_to_float(tuned_metrics_calibration, "macro_f1"),
+        "uses_calibration_split": uses_calibration_split,
+        "threshold_calibration_ratio": args.threshold_calibration_ratio,
+        "selection_size": int(len(val_select_df)),
+        "calibration_size": int(len(val_calibration_df)),
         "model_type": args.model_type,
         "loss_type": args.loss_type,
         "output_dir": os.path.relpath(
@@ -488,9 +630,16 @@ def main() -> None:
 
     print("[DONE] Training completed.")
     print(f"[DONE] Best val macro-F1: {best_macro_f1:.4f}")
+    print("[DONE] Threshold tuning macro-F1:")
     print(
-        "[DONE] Threshold tuning macro-F1: "
-        f"default={default_metrics['macro_f1']:.4f}, tuned={tuned_metrics['macro_f1']:.4f}"
+        "       selection "
+        f"default={default_metrics_selection['macro_f1']:.4f}, "
+        f"tuned={tuned_metrics_selection['macro_f1']:.4f}"
+    )
+    print(
+        "       calibration "
+        f"default={default_metrics_calibration['macro_f1']:.4f}, "
+        f"tuned={tuned_metrics_calibration['macro_f1']:.4f}"
     )
 
 

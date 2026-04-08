@@ -1438,7 +1438,7 @@ def run_train(args: argparse.Namespace) -> None:
     val_selection_df, val_calibration_df, use_heldout_calibration = split_validation_for_threshold_calibration(
         val_df=val_df,
         calibration_ratio=args.threshold_calibration_ratio,
-        seed=args.seed,
+        seed=args.threshold_calibration_seed,
     )
 
     if use_heldout_calibration:
@@ -1489,10 +1489,7 @@ def run_train(args: argparse.Namespace) -> None:
     best_macro_f1 = -1.0
     patience_counter = 0
 
-    if hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler"):
-        scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
-    else:
-        scaler = torch.cuda.amp.GradScaler(enabled=device.type == "cuda")
+    scaler = torch.cuda.amp.GradScaler(enabled=device.type == "cuda")
 
     best_model_path = args.output_dir / "best_model.pt"
     vocab_path = args.output_dir / "vocab.json"
@@ -1679,11 +1676,20 @@ def run_train(args: argparse.Namespace) -> None:
 
     threshold_payload = {
         "thresholds": tuned_thresholds_map,
-        "default_macro_f1": metric_to_float(default_metrics, "macro_f1"),
-        "tuned_macro_f1": metric_to_float(tuned_metrics, "macro_f1"),
-        "default_micro_f1": metric_to_float(default_metrics, "micro_f1"),
-        "tuned_micro_f1": metric_to_float(tuned_metrics, "micro_f1"),
+        "selection_default_macro_f1": metric_to_float(default_metrics, "macro_f1"),
+        "selection_tuned_macro_f1": metric_to_float(tuned_metrics, "macro_f1"),
+        "selection_default_micro_f1": metric_to_float(default_metrics, "micro_f1"),
+        "selection_tuned_micro_f1": metric_to_float(tuned_metrics, "micro_f1"),
+        "calibration_default_macro_f1": metric_to_float(tuning_default_metrics, "macro_f1"),
+        "calibration_tuned_macro_f1": metric_to_float(tuning_tuned_metrics, "macro_f1"),
+        "calibration_default_micro_f1": metric_to_float(tuning_default_metrics, "micro_f1"),
+        "calibration_tuned_micro_f1": metric_to_float(tuning_tuned_metrics, "micro_f1"),
+        "default_macro_f1": metric_to_float(tuning_default_metrics, "macro_f1"),
+        "tuned_macro_f1": metric_to_float(tuning_tuned_metrics, "macro_f1"),
+        "default_micro_f1": metric_to_float(tuning_default_metrics, "micro_f1"),
+        "tuned_micro_f1": metric_to_float(tuning_tuned_metrics, "micro_f1"),
         "tuning_source": tuning_source,
+        "uses_calibration_split": use_heldout_calibration,
         "threshold_calibration_ratio": args.threshold_calibration_ratio,
         "selection_val_size": int(len(val_selection_df)),
         "tuning_val_size": int(len(val_calibration_df) if use_heldout_calibration else len(val_selection_df)),
@@ -1702,10 +1708,19 @@ def run_train(args: argparse.Namespace) -> None:
     run_summary = {
         "label_order": label_order,
         "best_val_macro_f1": best_macro_f1,
-        "default_macro_f1": metric_to_float(default_metrics, "macro_f1"),
-        "tuned_macro_f1": metric_to_float(tuned_metrics, "macro_f1"),
+        "selection_default_macro_f1": metric_to_float(default_metrics, "macro_f1"),
+        "selection_tuned_macro_f1": metric_to_float(tuned_metrics, "macro_f1"),
+        "calibration_default_macro_f1": metric_to_float(tuning_default_metrics, "macro_f1"),
+        "calibration_tuned_macro_f1": metric_to_float(tuning_tuned_metrics, "macro_f1"),
+        "default_macro_f1": metric_to_float(tuning_default_metrics, "macro_f1"),
+        "tuned_macro_f1": metric_to_float(tuning_tuned_metrics, "macro_f1"),
         "threshold_tuning_source": tuning_source,
+        "uses_calibration_split": use_heldout_calibration,
         "threshold_calibration_ratio": args.threshold_calibration_ratio,
+        "selection_val_size": int(len(val_selection_df)),
+        "tuning_val_size": int(
+            len(val_calibration_df) if use_heldout_calibration else len(val_selection_df)
+        ),
         "model_type": args.model_type,
         "loss_type": args.loss_type,
         "output_dir": os.path.relpath(str(args.output_dir.resolve()), start=str(Path.cwd().resolve())),
@@ -1723,19 +1738,31 @@ def run_train(args: argparse.Namespace) -> None:
         "[DONE] Threshold tuning macro-F1: "
         f"default={default_metrics['macro_f1']:.4f}, tuned={tuned_metrics['macro_f1']:.4f}"
     )
+    print(
+        "[DONE] Calibration macro-F1: "
+        f"default={tuning_default_metrics['macro_f1']:.4f}, "
+        f"tuned={tuning_tuned_metrics['macro_f1']:.4f}"
+    )
 
 
-def run_predict(args: argparse.Namespace) -> None:
-    device = choose_device(args.device)
-    print(f"[INFO] Device: {device}")
+def resolve_checkpoint_paths(args: argparse.Namespace) -> List[Path]:
+    if args.ensemble_checkpoints:
+        checkpoint_paths = [Path(p) for p in args.ensemble_checkpoints]
+        if args.checkpoint is not None:
+            checkpoint_paths.append(Path(args.checkpoint))
+        return checkpoint_paths
 
-    checkpoint = torch.load(args.checkpoint, map_location=device)
+    if args.checkpoint is None:
+        raise ValueError("Provide --checkpoint or --ensemble-checkpoints")
+    return [Path(args.checkpoint)]
+
+
+def build_model_from_checkpoint(
+    checkpoint: Dict[str, Any],
+    device: torch.device,
+) -> Tuple[nn.Module, str]:
     model_args = checkpoint["model_args"]
-    label_order = checkpoint["label_order"]
     model_type = checkpoint.get("model_type", "bilstm")
-    vocab = checkpoint.get("vocab")
-    max_length = int(checkpoint["max_length"])
-    text_column = checkpoint.get("text_column", "tweet_clean")
 
     if model_type == "transformer":
         model = TransformerMultiLabelClassifier(
@@ -1747,23 +1774,42 @@ def run_predict(args: argparse.Namespace) -> None:
             pooling=model_args["pooling"],
             freeze_backbone=model_args.get("freeze_backbone", False),
         ).to(device)
-    else:
-        if vocab is None:
-            raise ValueError("BiLSTM checkpoint is missing vocab")
+        model.load_state_dict(checkpoint["model_state_dict"])
+        return model, model_type
 
-        model = BiLSTMMultiHeadAttention(
-            vocab_size=model_args["vocab_size"],
-            embedding_dim=model_args["embedding_dim"],
-            hidden_size=model_args["hidden_size"],
-            num_layers=model_args["num_layers"],
-            attention_heads=model_args["attention_heads"],
-            dropout=model_args["dropout"],
-            num_labels=model_args["num_labels"],
-            pretrained_embeddings=None,
-            freeze_embedding=model_args.get("freeze_embedding", False),
-        ).to(device)
+    vocab = checkpoint.get("vocab")
+    if vocab is None:
+        raise ValueError("BiLSTM checkpoint is missing vocab")
 
+    model = BiLSTMMultiHeadAttention(
+        vocab_size=model_args["vocab_size"],
+        embedding_dim=model_args["embedding_dim"],
+        hidden_size=model_args["hidden_size"],
+        num_layers=model_args["num_layers"],
+        attention_heads=model_args["attention_heads"],
+        dropout=model_args["dropout"],
+        num_labels=model_args["num_labels"],
+        pretrained_embeddings=None,
+        freeze_embedding=model_args.get("freeze_embedding", False),
+    ).to(device)
     model.load_state_dict(checkpoint["model_state_dict"])
+    return model, model_type
+
+
+def run_predict(args: argparse.Namespace) -> None:
+    device = choose_device(args.device)
+    print(f"[INFO] Device: {device}")
+
+    checkpoint_paths = resolve_checkpoint_paths(args)
+    print(f"[INFO] Checkpoints: {len(checkpoint_paths)}")
+
+    checkpoint = torch.load(checkpoint_paths[0], map_location=device)
+    model_args = checkpoint["model_args"]
+    label_order = checkpoint["label_order"]
+    model_type = checkpoint.get("model_type", "bilstm")
+    vocab = checkpoint.get("vocab")
+    max_length = int(checkpoint["max_length"])
+    text_column = checkpoint.get("text_column", "tweet_clean")
 
     with args.threshold_file.open("r", encoding="utf-8") as f:
         threshold_payload = json.load(f)
@@ -1795,8 +1841,49 @@ def run_predict(args: argparse.Namespace) -> None:
             num_workers=args.num_workers,
         )
 
-    probabilities = predict_probabilities(model=model, data_loader=test_loader, device=device)
-    preds = (probabilities >= thresholds).astype(int)
+    probabilities_accum: List[np.ndarray] = []
+    for checkpoint_path in checkpoint_paths:
+        ckpt = torch.load(checkpoint_path, map_location=device)
+        if ckpt["label_order"] != label_order:
+            raise ValueError(f"Label order mismatch in ensemble checkpoint: {checkpoint_path}")
+
+        ckpt_model_args = ckpt["model_args"]
+        ckpt_model_type = ckpt.get("model_type", "bilstm")
+        if ckpt_model_type != model_type:
+            raise ValueError(f"Model type mismatch in ensemble checkpoint: {checkpoint_path}")
+        if int(ckpt["max_length"]) != max_length:
+            raise ValueError(f"Max length mismatch in ensemble checkpoint: {checkpoint_path}")
+        if ckpt.get("text_column", "tweet_clean") != text_column:
+            raise ValueError(f"Text column mismatch in ensemble checkpoint: {checkpoint_path}")
+
+        if model_type == "transformer":
+            if (
+                ckpt_model_args.get("pretrained_model_name")
+                != model_args.get("pretrained_model_name")
+            ):
+                raise ValueError(
+                    "Ensemble transformer checkpoints must use the same tokenizer/model "
+                    f"as first checkpoint: {checkpoint_path}"
+                )
+        else:
+            if ckpt.get("vocab") != vocab:
+                raise ValueError(f"BiLSTM vocab mismatch in ensemble checkpoint: {checkpoint_path}")
+
+        model, _ = build_model_from_checkpoint(ckpt, device)
+        probabilities_accum.append(
+            predict_probabilities(model=model, data_loader=test_loader, device=device)
+        )
+
+    probabilities = probabilities_accum[0]
+    if len(probabilities_accum) > 1:
+        probabilities = sum(probabilities_accum) / len(probabilities_accum)
+        print(
+            "[INFO] Ensemble probability averaging completed "
+            f"({len(probabilities_accum)} checkpoints)."
+        )
+
+    threshold_array = np.asarray(thresholds, dtype=np.float32).reshape(1, -1)
+    preds = (probabilities >= threshold_array).astype(int)
 
     sample_df = pd.read_csv(args.sample_submission)
     if list(sample_df.columns[1:]) != list(label_order):
@@ -2039,6 +2126,12 @@ def add_train_subparser(subparsers: argparse._SubParsersAction[argparse.Argument
             "Use >0 to reduce threshold overfitting (e.g., 0.2)."
         ),
     )
+    parser.add_argument(
+        "--threshold-calibration-seed",
+        type=int,
+        default=42,
+        help="Random seed used for validation threshold calibration split.",
+    )
 
     parser.add_argument("--glove-path", type=Path, default=None)
     parser.add_argument("--freeze-embedding", action="store_true")
@@ -2051,7 +2144,14 @@ def add_predict_subparser(subparsers: argparse._SubParsersAction[argparse.Argume
     parser = subparsers.add_parser("predict", help="Run inference and generate submission")
     parser.add_argument("--data-dir", type=Path, default=Path("preprocessed"))
     parser.add_argument("--test-file", type=str, default="test_preprocessed.csv")
-    parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument("--checkpoint", type=Path, default=None)
+    parser.add_argument(
+        "--ensemble-checkpoints",
+        type=Path,
+        nargs="+",
+        default=None,
+        help="Optional list of checkpoints for probability averaging ensemble.",
+    )
     parser.add_argument("--threshold-file", type=Path, required=True)
     parser.add_argument("--sample-submission", type=Path, default=Path("sample_submission.csv"))
     parser.add_argument("--output-file", type=Path, default=Path("submission.csv"))
